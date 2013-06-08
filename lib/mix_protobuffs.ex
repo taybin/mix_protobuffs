@@ -1,9 +1,7 @@
 defmodule Mix.Tasks.Compile.Protobuffs do
-
-  alias :yecc, as: Yecc
-  alias :protobuffs_compiler, as: Compiler
-  alias Mix.Utils
+  alias :protobuffs_compile, as: Compiler
   alias Mix.Tasks.Compile.Erlang
+
   use Mix.Task
 
   @hidden true
@@ -26,9 +24,9 @@ defmodule Mix.Tasks.Compile.Protobuffs do
   ## Configuration
 
   * `:protobuff_paths` - directories to find source files.
-    Defaults to `["lib"]`, can be configured as:
+    Defaults to `["proto"]`, can be configured as:
 
-        [protobuff_paths: ["lib", "other"]]
+        [protobuff_paths: ["proto", "other"]]
 
   * `:protobuff_options` - compilation options that applies
      to protobuff's compiler. There are many other available
@@ -38,26 +36,24 @@ defmodule Mix.Tasks.Compile.Protobuffs do
   def run(args) do
     { opts, _ } = OptionParser.parse(args, switches: [force: :boolean])
 
-    project = Mix.project
-    source_paths = project[:protobuff_paths]
+    proto_path = "proto"
+    options = [output_include_dir: to_char_list(proto_path),
+               output_ebin_dir: to_char_list("ebin")]
 
-    files = lc source_path inlist source_paths do
-              Erlang.extract_stale_pairs(source_path, :proto, source_path, :erl, opts[:force])
-            end |> List.flatten
+    files = Erlang.extract_stale_pairs(proto_path, "proto", proto_path, "hrl", opts[:force])
 
     if files == [] do
       :noop
     else
-      compile_files(files, project[:protobuff_options] || [])
+      compile_files(files, options || [])
       :ok
     end
   end
 
   defp compile_files(files, options) do
     lc { input, output } inlist files do
-      options = options ++ [parserfile: Erlang.to_erl_file(output), report: true]
-      Erlang.interpret_result(input,
-        Compiler.scan_file(Erlang.to_erl_file(input), options))
+      result = Compiler.scan_file(to_char_list(input), options)
+      Erlang.interpret_result(input, {result, :true}, "proto" )
     end
   end
 end
