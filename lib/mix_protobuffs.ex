@@ -30,17 +30,19 @@ defmodule Mix.Tasks.Compile.Protobuffs do
 
   * `:protobuff_options` - compilation options that applies
      to protobuff's compiler. There are many other available
-     options here: http://www.erlang.org/doc/man/yecc.html#file-1
+     options here: https://github.com/basho/erlang_protobuffs
 
   """
   def run(args) do
     { opts, _ } = OptionParser.parse(args, switches: [force: :boolean])
 
-    proto_path = "proto"
-    options = [output_include_dir: to_char_list(proto_path),
+    source_paths = opts[:proto_paths] || ["proto"]
+    options = [output_include_dir: to_char_list(Enum.first(source_paths)),
                output_ebin_dir: to_char_list("ebin")]
 
-    files = Erlang.extract_stale_pairs(proto_path, "proto", proto_path, "hrl", opts[:force])
+    files = lc source_path inlist source_paths do
+              Erlang.extract_stale_pairs(source_path, :proto, source_path, :hrl, opts[:force])
+            end |> List.flatten
 
     if files == [] do
       :noop
@@ -53,7 +55,7 @@ defmodule Mix.Tasks.Compile.Protobuffs do
   defp compile_files(files, options) do
     lc { input, output } inlist files do
       result = Compiler.scan_file(to_char_list(input), options)
-      Erlang.interpret_result(input, {result, :true}, "proto" )
+      Erlang.interpret_result(input, {result, :true})
     end
   end
 end
