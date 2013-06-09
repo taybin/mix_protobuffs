@@ -66,9 +66,11 @@ defmodule Mix.Tasks.Compile.Protobuffs do
       header = "src/" <> basename <> "_pb.hrl"
       records = record_names(header)
       {:ok, file} = File.open(output, [:write])
-      IO.write(file, "defmodule #{String.capitalize(basename)} do\n")
+      IO.write(file, "defmodule #{String.capitalize(basename)} do\n\n")
       lc record inlist records do
         IO.write(file, "  defrecord :#{record}, Record.extract(:#{record}, from: \"#{header}\")\n")
+        IO.write(file, "  def encode_#{record}(record), do: :#{basename}_pb.encode_#{record}(record)\n")
+        IO.write(file, "  def decode_#{record}(binary), do: :#{basename}_pb.decode_#{record}(binary)\n\n")
       end
       IO.write(file, "end")
       File.close(file)
