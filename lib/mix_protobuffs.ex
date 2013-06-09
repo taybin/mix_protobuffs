@@ -37,25 +37,46 @@ defmodule Mix.Tasks.Compile.Protobuffs do
     { opts, _ } = OptionParser.parse(args, switches: [force: :boolean])
 
     source_paths = opts[:proto_paths] || ["proto"]
-    options = [output_include_dir: to_char_list(Enum.first(source_paths)),
-               output_ebin_dir: to_char_list("ebin")]
+    options = [output_include_dir: to_char_list("src"),
+               output_ebin_dir: to_char_list("ebin")] ++ opts
 
     files = lc source_path inlist source_paths do
-              Erlang.extract_stale_pairs(source_path, :proto, source_path, :hrl, opts[:force])
+              Erlang.extract_stale_pairs(source_path, "proto", "lib", "ex", opts[:force])
             end |> List.flatten
 
     if files == [] do
       :noop
     else
-      compile_files(files, options || [])
+      compile_files(files, options)
+      generate_wrappers(files, options)
       :ok
     end
   end
 
   defp compile_files(files, options) do
-    lc { input, output } inlist files do
+    lc { input, _output } inlist files do
       result = Compiler.scan_file(to_char_list(input), options)
       Erlang.interpret_result(input, {result, :true})
     end
+  end
+
+  defp generate_wrappers(files, options) do
+    lc { input, output } inlist files do
+      basename = Path.basename(input, ".proto")
+      header = "src/" <> basename <> "_pb.hrl"
+      records = record_names(header)
+      {:ok, file} = File.open(output, [:write])
+      IO.write(file, "defmodule #{String.capitalize(basename)} do\n")
+      lc record inlist records do
+        IO.write(file, "  defrecord :#{record}, Record.extract(:#{record}, from: \"#{header}\")\n")
+      end
+      IO.write(file, "end")
+      File.close(file)
+    end
+  end
+
+  defp record_names(header) do
+    contents = File.read!(header)
+    Regex.scan(%r/record\((.*),/, contents) |> List.flatten
   end
 end
