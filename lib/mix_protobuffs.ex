@@ -47,6 +47,7 @@ defmodule Mix.Tasks.Compile.Protobuffs do
     if files == [] do
       :noop
     else
+      File.mkdir(options[:output_include_dir])  # create "src" if necessary
       compile_files(files, options)
       generate_wrappers(files, options)
       :ok
