@@ -61,7 +61,7 @@ defmodule Mix.Tasks.Compile.Protobuffs do
     end
   end
 
-  defp generate_wrappers(files, options) do
+  defp generate_wrappers(files, _options) do
     lc { input, output } inlist files do
       basename = Path.basename(input, ".proto")
       header = "src/" <> basename <> "_pb.hrl"
