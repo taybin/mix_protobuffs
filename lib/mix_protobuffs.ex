@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Compile.Protobuffs do
 
   use Mix.Task
 
-  @hidden true
+  @hidden false
   @shortdoc "Compile protocol buffer files"
   @recursive true
 
